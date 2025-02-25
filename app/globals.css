@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 fieldset {
-    border: 2px solid #f2998a;
+    border: 2px solid #13a99b;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 25px;
@@ -33,9 +33,13 @@ legend {
 }
 
 hr{
-    border-color: #f2998a;
+    border-color: #13a99b;
 }
 
 .border {
     border-width: 2px;
+}
+
+.top-21{
+    top: 8rem;
 }

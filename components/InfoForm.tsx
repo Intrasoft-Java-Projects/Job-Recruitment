@@ -52,9 +52,9 @@ export default function DynamicForm() {
       // Initialize all sections as collapsed
       const initialCollapsedState: Record<string, boolean> = {};
       data?.forEach((q) => {
-        if (q.section) initialCollapsedState[q.section] = true;
+        if (q.section) initialCollapsedState[q.section] = false;
         if (q.subsection)
-          initialCollapsedState[`${q.section}-${q.subsection}`] = true;
+          initialCollapsedState[`${q.section}-${q.subsection}`] = false;
       });
 
       setCollapsedSections(initialCollapsedState);
@@ -93,48 +93,6 @@ export default function DynamicForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const customerData = {
-        contactName: formData.contactName,
-        jobTitle: formData.jobTitle,
-        contactEmail: formData.contactEmail,
-      };
-
-      // Check if the organization already exists
-      const { data: existingOrganization, error: checkError } = await supabase
-        .from("organizations")
-        .select("*")
-        .eq("contactEmail", customerData.contactEmail)
-        .single();
-
-      if (checkError && checkError.code !== "PGRST116") {
-        throw checkError;
-      }
-
-      let organization_id: number | null = null; // ✅ Explicit type
-
-      if (existingOrganization) {
-        // Update the existing record
-        const { error: updateError } = await supabase
-          .from("organizations")
-          .update(customerData)
-          .eq("contactEmail", customerData.contactEmail);
-
-        if (updateError) throw updateError;
-
-        organization_id = existingOrganization.id; // ✅ TypeScript now recognizes organization_id as a number
-      } else {
-        // Insert new organization
-        const { data: orgData, error: orgError } = await supabase
-          .from("organizations")
-          .insert([customerData])
-          .select("*")
-          .single();
-
-        if (orgError) throw orgError;
-
-        organization_id = orgData.id; // ✅ No TypeScript error anymore
-      }
-
       // Prepare responses
       const responsePayload = await Promise.all(
         questions.map(async (question) => {
@@ -147,9 +105,9 @@ export default function DynamicForm() {
           ) {
             const file = formData[question.id];
             const { data: fileData, error: fileError } = await supabase.storage
-              .from("organization_descriptions") // Replace "uploads" with your storage bucket name
+              .from("profile_photo") // Replace "uploads" with your storage bucket name
               .upload(
-                `files/${organization_id}/${question.id}/${file.name}`,
+                `files/${file.name}`,
                 file
               );
 
@@ -158,7 +116,6 @@ export default function DynamicForm() {
           }
 
           return {
-            organization_id,
             question_id: question.id,
             answer,
           };
@@ -210,8 +167,8 @@ export default function DynamicForm() {
       case "radio":
         return (
           <div key={id} className="mb-4">
-          <span className="block whitespace-pre-line">{label}</span>
-          {options?.map((option) => (
+            <span className="block whitespace-pre-line">{label}</span>
+            {options?.map((option) => (
               <label key={option.value} className="mr-4">
                 <input
                   type="radio"
@@ -263,8 +220,8 @@ export default function DynamicForm() {
       case "checkbox":
         return (
           <div key={id} className="mb-4">
-          <span className="block whitespace-pre-line">{label}</span>
-          {options?.map((option) => (
+            <span className="block whitespace-pre-line">{label}</span>
+            {options?.map((option) => (
               <label key={option.value} className="mr-4 flex items-center">
                 <input
                   type="checkbox"
@@ -283,8 +240,8 @@ export default function DynamicForm() {
       case "file":
         return (
           <label key={id} className="block mb-4">
-          <span className="whitespace-pre-line">{label}</span>
-          <input
+            <span className="whitespace-pre-line">{label}</span>
+            <input
               type="file"
               name={String(id)}
               onChange={(e) => handleFileChange(e, id)}
@@ -301,8 +258,8 @@ export default function DynamicForm() {
       case "textarea":
         return (
           <label key={id} className="block mb-4">
-          <span className="whitespace-pre-line">{label}</span>
-          <textarea
+            <span className="whitespace-pre-line">{label}</span>
+            <textarea
               name={String(id)}
               value={formData[id] || ""}
               onChange={handleChange}
@@ -311,8 +268,89 @@ export default function DynamicForm() {
           </label>
         );
 
+      case "file-photo":
+        return (
+          <div key={id} className="mb-4">
+            <label className="block mb-4">{label}</label>
+
+            {/* Profile Picture Upload & Preview */}
+            <div className="flex flex-col items-center">
+              <label className="relative cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFilePhotoChange(e, id)}
+                />
+
+                {/* Show preview if an image is selected */}
+                {formData[id] ? (
+                  <Image
+                    src={
+                      formData[id] instanceof File
+                        ? URL.createObjectURL(formData[id]) // Show local preview before upload
+                        : formData[id] // Show uploaded image URL
+                    }
+                    alt="Profile Preview"
+                    width={150}
+                    height={150}
+                    className="rounded-full border border-gray-300"
+                  />
+                ) : (
+                  <Image
+                    src="/dummy.png"
+                    alt="Upload Placeholder"
+                    width={150}
+                    height={150}
+                    className="rounded-full border border-gray-300"
+                  />
+                )}
+              </label>
+              <p className="text-xs text-gray-500 mt-2">Click to upload</p>
+            </div>
+          </div>
+        );
+
+
       default:
         return null;
+    }
+  };
+
+  const handleFilePhotoChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    questionId: number
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview
+    setFormData((prevData) => ({
+      ...prevData,
+      [questionId]: file, // Store file temporarily before upload
+    }));
+
+    try {
+      // Upload file to Supabase Storage
+      // const { data, error } = await supabase.storage
+      //   .from("profile_photo") // Ensure the correct bucket name
+      //   .upload(`profile_pics/${file.name}`, file, { upsert: true });
+
+      // if (error) throw error;
+
+      // Get Public URL after upload
+      // const { data: urlData } = supabase.storage
+      //   .from("profile_photo")
+      //   .getPublicUrl(`profile_pics/${file.name}`);
+
+      // Update formData with the file URL
+      // setFormData((prevData) => ({
+      //   ...prevData,
+      //   [questionId]: urlData.publicUrl, // Save the public URL for retrieval
+      // }));
+    } catch (error) {
+      console.error("File upload error:", error);
+      alert("Error uploading image. Please try again.");
     }
   };
 
@@ -456,41 +494,37 @@ export default function DynamicForm() {
   let sectionCounter = 1;
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-50">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-[#e0f2f1]">
+
+      {/* Centered Logo */}
       <Image
         alt="logo"
-        src="/netcompany-intrasoft-logo.png"
-        width={200}
-        height={200}
-        className="m-4"
+        src="/Fuze.png"
+        width={250}
+        height={250}
+        className="mb-6"
       />
-      <h1 className="text-2xl font-bold text-primary m-4">
-        Discovery Questionnaire
-      </h1>
 
-      <div className="px-8 py-4 max-w-3xl w-full text-primary">
-        <p className="mb-4 text-lg">
-          Thank you for taking the time to complete this questionnaire.
-        </p>
-        <ul className="list-disc list-inside space-y-2 text-primary ">
-          <li>
-            If you can’t finish in one session, click{" "}
-            <span className="font-bold">Save Progress</span> at the bottom
-            right. When you return, enter your email, and click the magnifying glass to continue where you left off.
-          </li>
-          <li>
-            Multiple respondents can fill out the same questionnaire but only
-            need to answer the sections relevant to their role.
-          </li>
-          <li>
-            Please complete all fields in your section(s) and provide detailed
-            responses in the text boxes.
-          </li>
-        </ul>
-        <p className="mt-4">
-          Your insights are invaluable in helping us understand the challenges
-          you face.
-        </p>
+            {/* Image for large screens (fixed at the top right) */}
+            <div className="hidden xl:block fixed top-6 right-8">
+        <Image
+          src="/Fuze img.jpeg"
+          alt="Your dream job is just a click away!"
+          width={300}
+          height={300}
+          className="w-[300px] h-auto object-cover rounded-lg shadow-md"
+        />
+      </div>
+
+      {/* Image for smaller screens (centered at the top above the form) */}
+      <div className="xl:hidden flex justify-center mt-6 mb-6">
+        <Image
+          src="/Fuze img.jpeg"
+          alt="Your dream job is just a click away!"
+          width={300}
+          height={300}
+          className="w-[300px] h-auto object-cover rounded-lg shadow-md"
+        />
       </div>
 
       {submitted ? (
@@ -500,54 +534,9 @@ export default function DynamicForm() {
       ) : (
         <form
           className="bg-white shadow-lg p-8 rounded-lg max-w-3xl w-full"
-          onSubmit={handleSubmit}
+          // onSubmit={handleSubmit}
           encType="multipart/form-data"
         >
-          {/* Customer Information */}
-          <fieldset className="mb-6">
-            <legend>Customer Information</legend>
-            <label className="block mb-4 relative">
-              Contact Email:
-              <div className="relative">
-                <input
-                  type="email"
-                  name="contactEmail"
-                  className="w-full mt-2 p-2 border rounded pr-10"
-                  value={formData.contactEmail || ""}
-                  onChange={handleChange}
-                  required
-                />
-                <span
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
-                  onClick={handleSearch}
-                >
-                  <MagnifyingGlassIcon className="h-5 w-5" />
-                </span>
-              </div>
-            </label>
-            <label className="block mb-4">
-              Contact Name:
-              <input
-                type="text"
-                name="contactName"
-                className="w-full mt-2 p-2 border rounded"
-                value={formData.contactName || ""}
-                onChange={handleChange}
-                required
-              />
-            </label>
-            <label className="block mb-4">
-              Job Title:
-              <input
-                type="text"
-                name="jobTitle"
-                className="w-full mt-2 p-2 border rounded"
-                value={formData.jobTitle || ""}
-                onChange={handleChange}
-                required
-              />
-            </label>
-          </fieldset>
 
           {/* Dynamic Questions */}
           {loading ? (
@@ -561,7 +550,7 @@ export default function DynamicForm() {
                     onClick={() => toggleCollapse(section)}
                     className="text-left w-full"
                   >
-                    {sectionCounter++}. {section}
+                    {section}
                   </button>
                 </legend>
                 {!collapsedSections[section] &&
@@ -598,15 +587,15 @@ export default function DynamicForm() {
             ))
           )}
 
-          <div className="flex items-center justify-center"></div>
+          <button
+            // onClick={handleSubmit}
+            type="button"
+            className="bg-[#0f877c] text-white font-bold py-3 px-10 rounded-full shadow-lg hover:bg-[#13a99b] transition-colors block mx-auto"
+          >
+            Submit
+          </button>
         </form>
       )}
-      <button
-        onClick={handleSubmit}
-        className="fixed bottom-8 right-8 bg-[#0E2245] text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-[#0C1C38] transition-colors"
-      >
-        Save Progress
-      </button>
     </div>
   );
 }
