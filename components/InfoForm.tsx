@@ -24,7 +24,7 @@ type Question = {
 
 export default function DynamicForm() {
   const searchParams = useSearchParams();
-  const formId = Number(searchParams.get("formid")); // Read formId from query string
+  const formId = Number(searchParams.get("formid")) || 1; // Read formId from query string
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
