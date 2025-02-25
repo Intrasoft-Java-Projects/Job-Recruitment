@@ -505,25 +505,25 @@ export default function DynamicForm() {
         className="mb-6"
       />
 
-            {/* Image for large screens (fixed at the top right) */}
-            <div className="hidden xl:block fixed top-6 right-8">
+      {/* Image for large screens (fixed at the top right) */}
+      <div className="hidden xl:block fixed top-6 right-8">
         <Image
           src="/Fuze img.jpeg"
           alt="Your dream job is just a click away!"
-          width={300}
-          height={300}
-          className="w-[300px] h-auto object-cover rounded-lg shadow-md"
+          width={250}
+          height={250}
+          className="w-[250px] h-auto object-cover rounded-lg shadow-md"
         />
       </div>
 
-      {/* Image for smaller screens (centered at the top above the form) */}
-      <div className="xl:hidden flex justify-center mt-6 mb-6">
+      {/* Image for smaller screens (below 1280px) */}
+      <div className="lg:hidden flex justify-center mt-6 mb-6">
         <Image
           src="/Fuze img.jpeg"
           alt="Your dream job is just a click away!"
-          width={300}
-          height={300}
-          className="w-[300px] h-auto object-cover rounded-lg shadow-md"
+          width={250}
+          height={250}
+          className="w-[250px] h-auto object-cover rounded-lg shadow-md"
         />
       </div>
 
